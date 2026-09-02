@@ -145,6 +145,15 @@ class Asteroid {
   }
 }
 
+// ── Skins ─────────────────────────────────────────────────────────────────────
+const SKINS = [
+  { name: 'CLÁSICA',  color: '#fff',    verts: [[20, 0], [-12, -9], [-7, 0], [-12, 9]] },
+  { name: 'DARDO',    color: '#4df3ff', verts: [[20, 0], [-2, -7], [-10, -3], [-4, 0], [-10, 3], [-2, 7]] },
+  { name: 'ÁGUILA',   color: '#ff9d00', verts: [[20, 0], [-4, -11], [-16, -4], [-8, 0], [-16, 4], [-4, 11]] },
+  { name: 'ÍCARO',    color: '#39ff8e', verts: [[22, 0], [0, -10], [-14, -2], [-6, 0], [-14, 2], [0, 10]] },
+  { name: 'MARTILLO', color: '#ff5cff', verts: [[18, 0], [6, -6], [0, -12], [-8, -6], [-4, 0], [-8, 6], [0, 12], [6, 6]] },
+];
+
 // ── Ship ──────────────────────────────────────────────────────────────────────
 class Ship {
   constructor() { this.reset(); }
@@ -156,6 +165,7 @@ class Ship {
     this.vx     = 0;
     this.vy     = 0;
     this.radius = 12;
+    this.skin   = currentSkin;
     this.thrusting     = false;
     this.invincible    = 3;
     this.shootCooldown = 0;
@@ -205,16 +215,16 @@ class Ship {
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.rotate(this.angle);
-    ctx.strokeStyle = '#fff';
+    const sk = SKINS[this.skin];
+    ctx.strokeStyle = sk.color;
     ctx.lineWidth   = 1.5;
     ctx.lineJoin    = 'round';
 
-    // Silueta clásica: triángulo con muesca trasera
+    // Silueta definida por el skin activo
     ctx.beginPath();
-    ctx.moveTo( 20,  0);   // nariz
-    ctx.lineTo(-12, -9);   // ala izquierda
-    ctx.lineTo( -7,  0);   // muesca trasera
-    ctx.lineTo(-12,  9);   // ala derecha
+    ctx.moveTo(sk.verts[0][0], sk.verts[0][1]);
+    for (let i = 1; i < sk.verts.length; i++)
+      ctx.lineTo(sk.verts[i][0], sk.verts[i][1]);
     ctx.closePath();
     ctx.stroke();
 
@@ -306,7 +316,9 @@ let ship, bullets, asteroids, particles, powerUps;
 let score, lives, level;
 let state;      // 'playing' | 'dead' | 'gameover'
 let deadTimer;
-let starNotice; // aviso al aparecer la estrella fugaz
+let starNotice;   // aviso al aparecer la estrella fugaz
+let currentSkin = 0; // skin activo de la nave
+let skinNotice  = 0; // aviso al cambiar de skin
 
 function spawnAsteroids(count) {
   const SAFE_DIST = 130;
@@ -371,6 +383,11 @@ function killShip() {
 // ── Update ────────────────────────────────────────────────────────────────────
 function update(dt) {
   if (starNotice > 0) starNotice -= dt;
+  if (skinNotice  > 0) skinNotice  -= dt;
+
+  // Cambio de skin en vivo (teclas 1-5)
+  for (let i = 0; i < SKINS.length; i++)
+    if (pressed('Digit' + (i + 1))) { currentSkin = i; ship.skin = i; skinNotice = 1.5; }
 
   if (state === 'gameover') {
     if (pressed('Space')) initGame();
@@ -447,17 +464,18 @@ function update(dt) {
 
 // ── Draw ──────────────────────────────────────────────────────────────────────
 function drawLifeIcon(x, y) {
+  const sk    = SKINS[currentSkin];
+  const SCALE = 0.45;
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(-Math.PI / 2);
-  ctx.strokeStyle = '#fff';
+  ctx.strokeStyle = sk.color;
   ctx.lineWidth   = 1.2;
   ctx.lineJoin    = 'round';
   ctx.beginPath();
-  ctx.moveTo( 9,  0);
-  ctx.lineTo(-6, -5);
-  ctx.lineTo(-3,  0);
-  ctx.lineTo(-6,  5);
+  ctx.moveTo(sk.verts[0][0] * SCALE, sk.verts[0][1] * SCALE);
+  for (let i = 1; i < sk.verts.length; i++)
+    ctx.lineTo(sk.verts[i][0] * SCALE, sk.verts[i][1] * SCALE);
   ctx.closePath();
   ctx.stroke();
   ctx.restore();
@@ -484,6 +502,14 @@ function drawHUD() {
     ctx.fillStyle   = '#ffe600';
     ctx.font        = 'bold 16px monospace';
     ctx.fillText('¡ESTRELLA FUGAZ!', W / 2, 52);
+  }
+
+  // Aviso de cambio de skin
+  if (skinNotice > 0) {
+    ctx.textAlign = 'center';
+    ctx.fillStyle = SKINS[currentSkin].color;
+    ctx.font      = '14px monospace';
+    ctx.fillText(`SKIN: ${SKINS[currentSkin].name}`, W / 2, 76);
   }
 }
 
