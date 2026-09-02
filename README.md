@@ -44,3 +44,4 @@ Luego visita `http://localhost:3000`.
 - Asteroides se parten en fragmentos más pequeños al ser destruidos
 - Partículas de explosión al destruir asteroides
 - Power-up de velocidad: al destruir asteroides hay un 12% de probabilidad de soltar un objeto "V"; al recogerlo, la nave se mueve al doble de rápido durante 5 segundos
+- Estrella fugaz: asteroide especial amarillo que cruza la pantalla mucho más rápido que el resto, una por nivel; vale 50 puntos y desaparece sola al poco tiempo

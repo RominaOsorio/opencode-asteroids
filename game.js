@@ -63,7 +63,7 @@ const SPEEDS = [0, 85, 55, 32];   // velocidad base por tamaño
 const POINTS = [0, 100, 50, 20];  // puntos por tamaño
 
 class Asteroid {
-  constructor(x, y, size = 3) {
+  constructor(x, y, size = 3, star = false) {
     this.x    = x;
     this.y    = y;
     this.size = size;
@@ -71,11 +71,17 @@ class Asteroid {
     this.dead = false;
 
     const angle = rand(0, Math.PI * 2);
-    const speed = SPEEDS[size] + rand(-15, 15);
+    let speed = SPEEDS[size] + rand(-15, 15);
+    if (star) speed *= 2.2;   // estrella fugaz: mucho más rápida
     this.vx = Math.cos(angle) * speed;
     this.vy = Math.sin(angle) * speed;
     this.rotSpeed = rand(-1.2, 1.2);
     this.rot = rand(0, Math.PI * 2);
+
+    // Estrella fugaz: desaparece sola
+    this.isStar     = !!star;
+    this.ttl        = this.isStar ? rand(9, 12) : Infinity;
+    this.blinkTimer = 0;
 
     // Polígono irregular
     const n = randInt(8, 13);
@@ -91,10 +97,15 @@ class Asteroid {
     this.x   = wrap(this.x + this.vx * dt, W);
     this.y   = wrap(this.y + this.vy * dt, H);
     this.rot += this.rotSpeed * dt;
+    if (this.isStar) {
+      this.ttl -= dt;
+      this.blinkTimer += dt;
+      if (this.ttl <= 0) this.dead = true;
+    }
   }
 
   split() {
-    if (this.size <= 1) return [];
+    if (this.isStar || this.size <= 1) return [];
     return [
       new Asteroid(this.x, this.y, this.size - 1),
       new Asteroid(this.x, this.y, this.size - 1),
@@ -102,10 +113,26 @@ class Asteroid {
   }
 
   draw() {
+    // Parpadeo acelerado al agotarse
+    if (this.isStar && this.ttl < 2 &&
+        Math.floor(this.blinkTimer * 12) % 2 !== 0) return;
+
     ctx.save();
     ctx.translate(this.x, this.y);
+
+    // Estela en dirección opuesta al movimiento (espacio mundo)
+    if (this.isStar) {
+      ctx.beginPath();
+      ctx.moveTo(-this.vx * 0.10, -this.vy * 0.10);
+      ctx.lineTo(-this.vx * 0.28, -this.vy * 0.28);
+      ctx.strokeStyle = 'rgba(255, 230, 0, 0.6)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
     ctx.rotate(this.rot);
-    ctx.strokeStyle = '#fff';
+
+    ctx.strokeStyle = this.isStar ? '#ffe600' : '#fff';
     ctx.lineWidth   = 1.5;
     ctx.lineJoin    = 'round';
     ctx.beginPath();
@@ -279,6 +306,7 @@ let ship, bullets, asteroids, particles, powerUps;
 let score, lives, level;
 let state;      // 'playing' | 'dead' | 'gameover'
 let deadTimer;
+let starNotice; // aviso al aparecer la estrella fugaz
 
 function spawnAsteroids(count) {
   const SAFE_DIST = 130;
@@ -290,6 +318,16 @@ function spawnAsteroids(count) {
     } while (Math.hypot(x - W / 2, y - H / 2) < SAFE_DIST);
     asteroids.push(new Asteroid(x, y, 3));
   }
+  // Estrella fugaz: bonus rápido que desaparece sola (una por nivel)
+  let cx, cy;
+  // La estrella entra desde fuera de la pantalla (más espectacular)
+  const fromEdge = randInt(0, 3);
+  if (fromEdge === 0)      { cx = rand(0, W);  cy = -40; }
+  else if (fromEdge === 1) { cx = rand(0, W);  cy = H + 40; }
+  else if (fromEdge === 2) { cx = -40;         cy = rand(0, H); }
+  else                     { cx = W + 40;      cy = rand(0, H); }
+  asteroids.push(new Asteroid(cx, cy, 3, true));
+  starNotice = 1.5;
 }
 
 function initGame() {
@@ -332,6 +370,8 @@ function killShip() {
 
 // ── Update ────────────────────────────────────────────────────────────────────
 function update(dt) {
+  if (starNotice > 0) starNotice -= dt;
+
   if (state === 'gameover') {
     if (pressed('Space')) initGame();
     particles.forEach(p => p.update(dt));
@@ -371,11 +411,12 @@ function update(dt) {
       if (!a.dead && !b.dead && dist(b, a) < a.radius) {
         b.dead = true;
         a.dead = true;
-        score += POINTS[a.size];
+        score += a.isStar ? 50 : POINTS[a.size];
         explode(a.x, a.y, a.size * 5);
+        // La estrella fugaz no se parte, los normales sí
         newAsteroids.push(...a.split());
-        // Drop de power-up de velocidad
-        if (Math.random() < 0.12) powerUps.push(new PowerUp(a.x, a.y));
+        // Drop de power-up de velocidad (no aplica a la estrella)
+        if (!a.isStar && Math.random() < 0.12) powerUps.push(new PowerUp(a.x, a.y));
       }
     }
   }
@@ -400,8 +441,8 @@ function update(dt) {
     }
   }
 
-  // Nivel completado
-  if (asteroids.length === 0) nextLevel();
+  // Nivel completado (la estrella fugaz nunca bloquea el nivel)
+  if (asteroids.length === 0 || asteroids.every(a => a.isStar)) nextLevel();
 }
 
 // ── Draw ──────────────────────────────────────────────────────────────────────
@@ -437,6 +478,13 @@ function drawHUD() {
   for (let i = 0; i < lives; i++)
     drawLifeIcon(W - 16 - i * 22, 18);
 
+  // Aviso de estrella fugaz al aparecer
+  if (starNotice > 0) {
+    ctx.textAlign   = 'center';
+    ctx.fillStyle   = '#ffe600';
+    ctx.font        = 'bold 16px monospace';
+    ctx.fillText('¡ESTRELLA FUGAZ!', W / 2, 52);
+  }
 }
 
 function drawOverlay(title, sub) {
