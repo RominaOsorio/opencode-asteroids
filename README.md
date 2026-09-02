@@ -43,5 +43,8 @@ Luego visita `http://localhost:3000`.
 - 3 vidas con invencibilidad temporal al reaparecer (parpadeo)
 - Asteroides se parten en fragmentos más pequeños al ser destruidos
 - Partículas de explosión al destruir asteroides
-- Power-up de velocidad: al destruir asteroides hay un 12% de probabilidad de soltar un objeto "V"; al recogerlo, la nave se mueve al doble de rápido durante 5 segundos
+- Power-ups (15% de probabilidad al destruir asteroides, repartidos uniformemente; el indicio dura 5 segundos al recogerlos):
+  - Velocidad "V" (cian): la nave se mueve al doble de rápido
+  - Triple shot "T" (naranja): dispara 3 balas en abanico
+  - Escudo "S" (azul): envuelve la nave y destruye cualquier asteroide que la toque sin sufrir daño
 - Estrella fugaz: asteroide especial amarillo que cruza la pantalla mucho más rápido que el resto, una por nivel; vale 50 puntos y desaparece sola al poco tiempo
