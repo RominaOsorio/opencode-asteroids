@@ -48,3 +48,4 @@ Luego visita `http://localhost:3000`.
   - Triple shot "T" (naranja): dispara 3 balas en abanico
   - Escudo "S" (azul): envuelve la nave y destruye cualquier asteroide que la toque sin sufrir daño
 - Estrella fugaz: asteroide especial amarillo que cruza la pantalla mucho más rápido que el resto, una por nivel; vale 50 puntos y desaparece sola al poco tiempo
+- Skins (teclas `1`-`6`): cambia la apariencia de la nave. La skin **TITÁN** (tecla `6`) es el doble de grande y otorga el doble de puntos
