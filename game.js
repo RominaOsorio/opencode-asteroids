@@ -170,6 +170,7 @@ class Ship {
     this.invincible    = 3;
     this.shootCooldown = 0;
     this.speedBoost    = 0;
+    this.tripleShot    = 0;
     this.dead          = false;
   }
 
@@ -178,6 +179,7 @@ class Ship {
     if (this.invincible    > 0) this.invincible    -= dt;
     if (this.shootCooldown > 0) this.shootCooldown -= dt;
     if (this.speedBoost    > 0) this.speedBoost    -= dt;
+    if (this.tripleShot    > 0) this.tripleShot    -= dt;
 
     const ROT   = 3.5;   // rad/s
     const THRUST = 260 * (this.speedBoost > 0 ? 2 : 1);  // px/s²
@@ -202,9 +204,14 @@ class Ship {
     if (this.shootCooldown > 0 || this.dead) return [];
     this.shootCooldown = 0.2;
     const NOSE = 21;
-    const ox = this.x + Math.cos(this.angle) * NOSE;
-    const oy = this.y + Math.sin(this.angle) * NOSE;
-    return [new Bullet(ox, oy, this.angle)];
+    const angles = this.tripleShot > 0
+      ? [-12 * Math.PI / 180, 0, 12 * Math.PI / 180].map(o => this.angle + o)
+      : [this.angle];
+    return angles.map(a => {
+      const ox = this.x + Math.cos(a) * NOSE;
+      const oy = this.y + Math.sin(a) * NOSE;
+      return new Bullet(ox, oy, a);
+    });
   }
 
   draw() {
@@ -275,10 +282,16 @@ class Particle {
 }
 
 // ── Power-up ──────────────────────────────────────────────────────────────────
+const POWERUP_STYLE = {
+  speed:  { letter: 'V', color: 'rgba(0, 255, 200, 0.9)' },
+  triple: { letter: 'T', color: 'rgba(255, 210, 0, 0.9)' },
+};
+
 class PowerUp {
-  constructor(x, y) {
+  constructor(x, y, type = 'speed') {
     this.x          = x;
     this.y          = y;
+    this.type       = type;
     this.radius     = 11;
     this.ttl        = 8;       // segundos hasta desvanecerse
     this.blinkTimer = 0;
@@ -296,9 +309,10 @@ class PowerUp {
     const speed = this.ttl < 2 ? 12 : 5;
     if (Math.floor(this.blinkTimer * speed) % 2 !== 0) return;
 
+    const style = POWERUP_STYLE[this.type];
     ctx.save();
     ctx.translate(this.x, this.y);
-    ctx.strokeStyle = 'rgba(0, 255, 200, 0.9)';
+    ctx.strokeStyle = style.color;
     ctx.lineWidth   = 1.5;
     ctx.beginPath();
     ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
@@ -306,7 +320,7 @@ class PowerUp {
     ctx.fillStyle = '#fff';
     ctx.font      = 'bold 12px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText('V', 0, 4);
+    ctx.fillText(style.letter, 0, 4);
     ctx.restore();
   }
 }
@@ -432,8 +446,9 @@ function update(dt) {
         explode(a.x, a.y, a.size * 5);
         // La estrella fugaz no se parte, los normales sí
         newAsteroids.push(...a.split());
-        // Drop de power-up de velocidad (no aplica a la estrella)
-        if (!a.isStar && Math.random() < 0.12) powerUps.push(new PowerUp(a.x, a.y));
+        // Drop de power-up (no aplica a la estrella): 50% velocidad, 50% triple shot
+        if (!a.isStar && Math.random() < 0.12)
+          powerUps.push(new PowerUp(a.x, a.y, Math.random() < 0.5 ? 'speed' : 'triple'));
       }
     }
   }
@@ -450,10 +465,10 @@ function update(dt) {
     }
   }
 
-  // Recoger power-up de velocidad
+  // Recoger power-up
   for (const p of powerUps) {
     if (!p.dead && dist(ship, p) < ship.radius + p.radius) {
-      ship.speedBoost = 5;
+      ship[p.type === 'speed' ? 'speedBoost' : 'tripleShot'] = 5;
       p.dead = true;
     }
   }
@@ -489,6 +504,8 @@ function drawHUD() {
   ctx.fillText(`SCORE  ${score}`, 14, 26);
   if (ship.speedBoost > 0)
     ctx.fillText(`VELOCIDAD ${ship.speedBoost.toFixed(1)}s`, 14, 44);
+  if (ship.tripleShot > 0)
+    ctx.fillText(`TRIPLE ${ship.tripleShot.toFixed(1)}s`, 14, 62);
 
   ctx.textAlign = 'center';
   ctx.fillText(`NIVEL ${level}`, W / 2, 26);
