@@ -147,11 +147,12 @@ class Asteroid {
 
 // ── Skins ─────────────────────────────────────────────────────────────────────
 const SKINS = [
-  { name: 'CLÁSICA',  color: '#fff',    verts: [[20, 0], [-12, -9], [-7, 0], [-12, 9]] },
-  { name: 'DARDO',    color: '#4df3ff', verts: [[20, 0], [-2, -7], [-10, -3], [-4, 0], [-10, 3], [-2, 7]] },
-  { name: 'ÁGUILA',   color: '#ff9d00', verts: [[20, 0], [-4, -11], [-16, -4], [-8, 0], [-16, 4], [-4, 11]] },
-  { name: 'ÍCARO',    color: '#39ff8e', verts: [[22, 0], [0, -10], [-14, -2], [-6, 0], [-14, 2], [0, 10]] },
-  { name: 'MARTILLO', color: '#ff5cff', verts: [[18, 0], [6, -6], [0, -12], [-8, -6], [-4, 0], [-8, 6], [0, 12], [6, 6]] },
+  { name: 'CLÁSICA',  color: '#fff',    scale: 1, verts: [[20, 0], [-12, -9], [-7, 0], [-12, 9]] },
+  { name: 'DARDO',    color: '#4df3ff', scale: 1, verts: [[20, 0], [-2, -7], [-10, -3], [-4, 0], [-10, 3], [-2, 7]] },
+  { name: 'ÁGUILA',   color: '#ff9d00', scale: 1, verts: [[20, 0], [-4, -11], [-16, -4], [-8, 0], [-16, 4], [-4, 11]] },
+  { name: 'ÍCARO',    color: '#39ff8e', scale: 1, verts: [[22, 0], [0, -10], [-14, -2], [-6, 0], [-14, 2], [0, 10]] },
+  { name: 'MARTILLO', color: '#ff5cff', scale: 1, verts: [[18, 0], [6, -6], [0, -12], [-8, -6], [-4, 0], [-8, 6], [0, 12], [6, 6]] },
+  { name: 'TITÁN',    color: '#a855ff', scale: 2, pointsMul: 2, verts: [[40, 0], [-24, -18], [-14, 0], [-24, 18]] },
 ];
 
 // ── Ship ──────────────────────────────────────────────────────────────────────
@@ -164,8 +165,8 @@ class Ship {
     this.angle  = -Math.PI / 2;
     this.vx     = 0;
     this.vy     = 0;
-    this.radius = 12;
     this.skin   = currentSkin;
+    this.radius = 12 * (SKINS[this.skin].scale || 1);
     this.thrusting     = false;
     this.invincible    = 3;
     this.shootCooldown = 0;
@@ -205,7 +206,7 @@ class Ship {
   tryShoot() {
     if (this.shootCooldown > 0 || this.dead) return [];
     this.shootCooldown = 0.2;
-    const NOSE = 21;
+    const NOSE = 21 * (SKINS[this.skin].scale || 1);
     const angles = this.tripleShot > 0
       ? [-12 * Math.PI / 180, 0, 12 * Math.PI / 180].map(o => this.angle + o)
       : [this.angle];
@@ -408,7 +409,8 @@ function explode(x, y, count = 8) {
   // Destruye un asteroide: puntos, explosión, partes y drop de power-up
 function destroyAsteroid(a, newAsteroids) {
   a.dead = true;
-  score += a.isStar ? 50 : POINTS[a.size];
+  const mul = SKINS[ship.skin].pointsMul || 1;
+  score += (a.isStar ? 50 : POINTS[a.size]) * mul;
   explode(a.x, a.y, a.size * 5);
   // La estrella fugaz no se parte, los normales sí
   newAsteroids.push(...a.split());
@@ -439,7 +441,7 @@ function update(dt) {
 
   // Cambio de skin en vivo (teclas 1-5)
   for (let i = 0; i < SKINS.length; i++)
-    if (pressed('Digit' + (i + 1))) { currentSkin = i; ship.skin = i; skinNotice = 1.5; }
+    if (pressed('Digit' + (i + 1))) { currentSkin = i; ship.skin = i; ship.radius = 12 * (SKINS[i].scale || 1); skinNotice = 1.5; }
 
   if (state === 'gameover') {
     if (pressed('Space')) initGame();
